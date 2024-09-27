@@ -1,0 +1,5 @@
+#! /bin/bash
+#
+# Note network access and ssl are for git submodules
+
+guix shell -C -N -F bash cmake make gcc-toolchain git coreutils zlib sed sdsl-lite htslib nss-certs openssl -- bash -c "cd build ; rm -vf CMakeCache.txt ; cmake .. "

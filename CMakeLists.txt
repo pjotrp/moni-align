@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMakeModules")
 # ------------------------------------------------------------------------------
 if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "Setting build type to 'Release' as none was specified.")
-  set(CMAKE_BUILD_TYPE Release CACHE STRING 
+  set(CMAKE_BUILD_TYPE Release CACHE STRING
       "Choose the type of build, options are: Release|Debug|RelWithDebInfo (for distros)." FORCE)
 endif()
 
@@ -60,7 +60,7 @@ if (ZLIB_FOUND)
     message(STATUS "Creating zlib global library accessible to all CMakeLists.txt")
     add_library(zlib STATIC IMPORTED GLOBAL)
     set_property(TARGET zlib PROPERTY IMPORTED_LOCATION ${ZLIB_LIBRARIES})
-    target_include_directories(zlib INTERFACE ${ZLIB_INCLUDE_DIRS}) 
+    target_include_directories(zlib INTERFACE ${ZLIB_INCLUDE_DIRS})
 else()
     message(FATAL_ERROR "zlib not found!")
 endif()
@@ -85,25 +85,25 @@ else()
   message(STATUS "divsufsort sources found at ${DIVSUFSORT_SRC}.")
 endif()
 
-if (TARGET sdsl AND TARGET divsufsort AND TARGET divsufsort64)
+if (TARGET sdsl AND TARGET divsufsortm AND TARGET divsufsort64)
   # Need to add this for PFP-thresholds
-  target_include_directories(divsufsort INTERFACE ${DIVSUFSORT_SRC})
-  target_include_directories(divsufsort64 INTERFACE ${DIVSUFSORT_SRC})
+  target_include_directories(divsufsortm INTERFACE ${DIVSUFSORT_SRC})
+  target_include_directories(divsufsort64m INTERFACE ${DIVSUFSORT_SRC})
 else()
   message(STATUS "Creating sdsl global library accessible to all CMakeLists.txt")
-  add_library(sdsl STATIC IMPORTED GLOBAL)
-  set_property(TARGET sdsl PROPERTY IMPORTED_LOCATION ${SDSL_LIB})
-  target_include_directories(sdsl INTERFACE ${SDSL_SRC})
+  add_library(sdslm STATIC IMPORTED GLOBAL)
+  set_property(TARGET sdslm PROPERTY IMPORTED_LOCATION ${SDSL_LIB})
+  target_include_directories(sdslm INTERFACE ${SDSL_SRC})
 
   message(STATUS "Creating divsufsort global library accessible to all CMakeLists.txt")
-  add_library(divsufsort STATIC IMPORTED GLOBAL)
-  set_property(TARGET divsufsort PROPERTY IMPORTED_LOCATION ${DIVSUFSORT_LIB})
-  target_include_directories(divsufsort INTERFACE ${DIVSUFSORT_SRC})
+  add_library(divsufsortm STATIC IMPORTED GLOBAL)
+  set_property(TARGET divsufsortm PROPERTY IMPORTED_LOCATION ${DIVSUFSORT_LIB})
+  target_include_directories(divsufsortm INTERFACE ${DIVSUFSORT_SRC})
 
   message(STATUS "Creating divsufsort64 global library accessible to all CMakeLists.txt")
-  add_library(divsufsort64 STATIC IMPORTED GLOBAL)
-  set_property(TARGET divsufsort64 PROPERTY IMPORTED_LOCATION ${DIVSUFSORT64_LIB})
-  target_include_directories(divsufsort INTERFACE ${DIVSUFSORT_SRC})
+  add_library(divsufsort64m STATIC IMPORTED GLOBAL)
+  set_property(TARGET divsufsort64m PROPERTY IMPORTED_LOCATION ${DIVSUFSORT64_LIB})
+  target_include_directories(divsufsortm INTERFACE ${DIVSUFSORT_SRC})
 endif()
 
 # HTSLIB
@@ -120,7 +120,7 @@ if (NOT HTS_LIB)
     CONFIGURE_COMMAND ./configure --prefix=${CMAKE_RUNTIME_OUTPUT_DIRECTORY_PARENT} # Might have to modify
     BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND $(MAKE) install)
-  
+
   set(HTS_SRC ${CMAKE_CURRENT_BINARY_DIR}/include CACHE PATH "Path to htslib headers" FORCE)
   set(HTS_LIB ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libhts.so CACHE FILEPATH "Path to libhts.so" FORCE)
 else()
@@ -129,12 +129,12 @@ else()
 endif()
 
 # This should work since the find_library command should only look in specified lib directory
-if (NOT TARGET htslib)
+if (NOT TARGET htslibm)
   message(STATUS "Creating htslib global library accessible to all CMakeLists.txt")
-  add_library(htslib STATIC IMPORTED GLOBAL)
-  set_property(TARGET htslib PROPERTY IMPORTED_LOCATION ${HTS_LIB})
-  target_include_directories(htslib INTERFACE ${HTS_SRC})
-endif() 
+  add_library(htslibm STATIC IMPORTED GLOBAL)
+  set_property(TARGET htslibm PROPERTY IMPORTED_LOCATION ${HTS_LIB})
+  target_include_directories(htslibm INTERFACE ${HTS_SRC})
+endif()
 
 # Create FindHTSlib.cmake for PFP
 configure_file(${CMAKE_CURRENT_LIST_DIR}/pipeline/FindHTSlib.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/FindHTSlib.cmake @ONLY)
@@ -143,11 +143,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}")
 
 # PFP
 list(APPEND CMAKE_INCLUDE_PATH "${SDSL_SRC}" "${HTS_SRC}/htslib")
-find_program(PFP pfp++ PATHS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-if (NOT PFP)
+find_program(PFPm pfp++ PATHS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+if (NOT PFPm)
   message(STATUS "pfp++ not found. Building from submodule")
   add_git_submodule(${CMAKE_CURRENT_LIST_DIR}/thirdparty/pfp)
-  set(PFP ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pfp++ CACHE PATH "Path to pfp++ executable" FORCE)
+  set(PFPm ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pfp++ CACHE PATH "Path to pfp++ executable" FORCE)
   set(PFP_CHECK ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/check CACHE PATH "Path to check executable" FORCE)
 else()
   message(STATUS "pfp++ executable found at ${PFP}")
@@ -159,16 +159,17 @@ find_program(preprocess procdic PATHS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 find_program(postproc postproc PATHS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 if(NOT largerepair OR NOT preprocess OR NOT postproc)
   message(STATUS "bigrepair not found. Building from submodule")
+  add_git_submodule(${CMAKE_CURRENT_LIST_DIR}/thirdparty/bigrepair)
   set(CMAKE_INSTALL_PREFIX ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   ExternalProject_Add(
-    bigrepair_proj 
+    bigrepair_proj
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/bigrepair
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/thirdparty/bigrepair
     BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND "") # make install DESTDIR=${} installs the executables in ${} but ${}/usr/local/bin
                         # make install prefix=${} doesn't seem to work
 
-  # Copy the executables to the bin directory 
+  # Copy the executables to the bin directory
   add_custom_command(
     TARGET bigrepair_proj
     POST_BUILD
@@ -278,7 +279,7 @@ endif()
 # set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-sources")
 
 # set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Massimiliano Rossi")
-# set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT) 
+# set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 # set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE) # Groupp all components
 # set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 # set(CPACK_DEB_COMPONENT_INSTALL YES)
